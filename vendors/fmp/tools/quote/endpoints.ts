@@ -1,8 +1,8 @@
 export enum QuoteEndpoints {
   // AllForexPrices = '/api/v4/fx', -> moved to _lists
-  CryptoPrice = '/api/v4/crypto/last',
+  CryptoPrice = '/api/v4/crypto/last/{symbol}',
   // ExchangePrices = '/api/v3/quotes/{exchange}', -> too many tokens
-  ForexPrices = '/api/v4/forex/last',
+  ForexPrice = '/api/v4/forex/last/{symbol}',
   ForexQuote = '/api/v3/fx/{symbol}',
   BySymbol = '/api/v3/quote/{symbol}',
   QuoteOrder = '/api/v3/quote-order/{symbol}',

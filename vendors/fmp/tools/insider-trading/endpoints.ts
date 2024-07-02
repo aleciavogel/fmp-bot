@@ -1,5 +1,5 @@
 export enum InsiderTradingEndpoints {
-  AllCiks = '/api/v4/mapper-cik-company/{symbol}', // TODO: move to lists
+  // AllCiks = '/api/v4/mapper-cik-company/{symbol}', // TODO: move to lists
   BeneficialOwnership = '/api/v4/insider/ownership/acquisition_of_beneficial_ownership',
   BySymbol = '/api/v4/insider-roaster', // TODO: move to company info?
   CiksMappedToSymbols = '/api/v4/mapper-cik-name', // TODO: move to lists

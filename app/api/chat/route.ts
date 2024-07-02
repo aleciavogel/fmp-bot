@@ -34,11 +34,25 @@ const convertLangChainMessageToVercelMessage = (message: BaseMessage) => {
       tool_calls: (message as AIMessage).tool_calls,
     }
   } else {
-    return { content: message.content, role: message._getType() }
+    return {
+      content: message.content,
+      role: message._getType(),
+      metadata: message.response_metadata,
+    }
   }
 }
 
-const AGENT_SYSTEM_TEMPLATE = `You are a helpful assistant. You are here to help me with my questions about the stock exchange, finances, and investment opportunities. Summarize information wherever possible. If a tool does not exist for querying a type of information, reply that you do not know.`
+const AGENT_SYSTEM_TEMPLATE = `
+  You are a helpful assistant. You are here to help me with my questions about the stock exchange, finances, and 
+  investment opportunities using the provided tools. If a tool does not exist for querying a type of information, 
+  reply that you do not know. Do not make any assumptions and refer the user to seek professional advice when
+  appropriate.
+
+  Summarize information in a concise narrative format suitable for beginners rather than a list wherever possible. 
+  Combine related details into cohesive sentences and limit the response to one or two paragraphs.
+  
+  If the user asks for advice, query the most recent data available and provide a recommendation based on the data.
+`.trim()
 
 /**
  * This handler initializes and calls a tool which calls ReAct agent.
@@ -50,6 +64,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const returnIntermediateSteps = body.show_intermediate_steps
+
     /**
      * We represent intermediate steps as system messages for display purposes,
      * but don't want them in the chat history.
@@ -61,7 +76,7 @@ export async function POST(req: NextRequest) {
       .map(convertVercelMessageToLangChainMessage)
 
     const chat = new ChatOpenAI({
-      model: 'gpt-3.5-turbo-0125',
+      model: 'gpt-4o',
       temperature: 0,
     })
 
@@ -71,12 +86,6 @@ export async function POST(req: NextRequest) {
     const agent = createReactAgent({
       llm: chat,
       tools,
-      /**
-       * Modify the stock prompt in the prebuilt agent. See docs
-       * for how to customize your agent:
-       *
-       * https://langchain-ai.github.io/langgraphjs/tutorials/quickstart/
-       */
       messageModifier: new SystemMessage(AGENT_SYSTEM_TEMPLATE),
     })
 

@@ -49,6 +49,24 @@ class FmpApiModule {
    */
   public async request(endpoint: string, params: Record<string, any> = {}): Promise<any> {
     // Replace placeholders in the endpoint
+    const url = this.getUrl(endpoint, params)
+
+    console.log(url)
+
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error(`Error fetching data from ${endpoint}:`, error)
+      throw error
+    }
+  }
+
+  public getUrl(endpoint: string, params: Record<string, any> = {}): string {
+    // Replace placeholders in the endpoint
     endpoint = this.replacePlaceholders(endpoint, params)
 
     const url = new URL(`${this.baseUrl}${endpoint}`)
@@ -59,16 +77,7 @@ class FmpApiModule {
       }
     })
 
-    try {
-      const response = await fetch(url.toString())
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      return await response.json()
-    } catch (error) {
-      console.error(`Error fetching data from ${endpoint}:`, error)
-      throw error
-    }
+    return url.toString()
   }
 }
 

@@ -1,10 +1,10 @@
 export enum CompanyInfoEndpoints {
   // AllSharesFloat = '/api/v4/shares_float/all', -> moved to _list
-  AnalystEstimates = '/api/v3/analyst-estimates',
-  AnalystStockRecommendations = '/api/v3/analyst-stock-recommendations',
+  AnalystEstimates = '/api/v3/analyst-estimates/{symbol}',
+  AnalystStockRecommendations = '/api/v3/analyst-stock-recommendations/{symbol}',
   CompanyLogo = '/image-stock/{symbol}.png',
   CompanyNotes = '/api/v4/company-notes',
-  CompanyOutlook = '/api/v4/company-outlook',
+  CompanyOutlook = '/api/v4/company-outlook', // -> too many tokens
   // CountryList = '/api/v3/get-all-countries', -> moved to _list
   // DelistedCompanies = '/api/v3/delisted-companies', -> moved to _list
   EmployeeCount = '/api/v4/employee_count',

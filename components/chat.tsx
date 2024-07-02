@@ -1,20 +1,22 @@
 'use client'
 
-import type { FormEvent } from 'react'
+import type { FC, FormEvent } from 'react'
 import React, { useEffect, useRef, useState } from 'react'
 import type { Message } from 'ai'
 import { useChat } from 'ai/react'
 
 import { ChatMessageBubble } from '@/components/chat-message-bubble'
-import { IntermediateStep } from '@/components/intermediate-step'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
 
-export const Chat = () => {
+interface ChatProps {
+  onSymbolChange: (symbol: string) => void
+}
+
+export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
   const messageContainerRef = useRef<HTMLDivElement | null>(null)
   const endpoint = '/api/chat'
-  const [showIntermediateSteps, setShowIntermediateSteps] = useState(false)
   const [intermediateStepsLoading, setIntermediateStepsLoading] = useState(false)
   const [sourcesForMessages, setSourcesForMessages] = useState<Record<string, any>>({})
   const { toast } = useToast()
@@ -27,6 +29,7 @@ export const Chat = () => {
     handleSubmit,
     isLoading: chatEndpointIsLoading,
     setMessages,
+    addToolResult,
   } = useChat({
     api: endpoint,
     onResponse(response) {
@@ -35,6 +38,7 @@ export const Chat = () => {
         ? JSON.parse(Buffer.from(sourcesHeader, 'base64').toString('utf8'))
         : []
       const messageIndexHeader = response.headers.get('x-message-index')
+
       if (sources.length && messageIndexHeader !== null) {
         setSourcesForMessages({ ...sourcesForMessages, [messageIndexHeader]: sources })
       }
@@ -46,6 +50,12 @@ export const Chat = () => {
         description: e.message,
       })
     },
+    onFinish: (messages) => {
+      console.log(messages)
+    },
+    onToolCall: (toolCall) => {
+      console.log('Tool call:', toolCall)
+    },
   })
 
   async function sendMessage(e: FormEvent<HTMLFormElement>) {
@@ -56,74 +66,72 @@ export const Chat = () => {
     if (!messages.length) {
       await new Promise((resolve) => setTimeout(resolve, 300))
     }
-    if (chatEndpointIsLoading ?? intermediateStepsLoading) {
+    if (chatEndpointIsLoading || intermediateStepsLoading) {
       return
     }
-    if (!showIntermediateSteps) {
-      handleSubmit(e)
-      // Some extra work to show intermediate steps properly
-    } else {
-      setIntermediateStepsLoading(true)
-      setInput('')
-      const messagesWithUserReply = messages.concat({
-        id: messages.length.toString(),
-        content: input,
-        role: 'user',
+
+    setIntermediateStepsLoading(true)
+    setInput('')
+    const messagesWithUserReply = messages.concat({
+      id: messages.length.toString(),
+      content: input,
+      role: 'user',
+    })
+    setMessages(messagesWithUserReply)
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: messagesWithUserReply,
+        show_intermediate_steps: true,
+      }),
+    })
+    const json = await response.json()
+    setIntermediateStepsLoading(false)
+    if (response.status === 200) {
+      const responseMessages: Message[] = json.messages
+      // Represent intermediate steps as system messages for display purposes
+      // TODO: Add proper support for tool messages
+      const toolCallMessages = responseMessages.filter((responseMessage: Message) => {
+        return (
+          (responseMessage.role === 'assistant' && !!responseMessage.tool_calls?.length) ||
+          responseMessage.role === 'tool'
+        )
       })
-      setMessages(messagesWithUserReply)
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({
-          messages: messagesWithUserReply,
-          show_intermediate_steps: true,
-        }),
-      })
-      const json = await response.json()
-      setIntermediateStepsLoading(false)
-      if (response.status === 200) {
-        const responseMessages: Message[] = json.messages
-        // Represent intermediate steps as system messages for display purposes
-        const toolCallMessages = responseMessages.filter((responseMessage: Message) => {
-          return (
-            (responseMessage.role === 'assistant' && !!responseMessage.toolInvocations?.length) ||
-            responseMessage.role === 'tool'
-          )
+
+      const intermediateStepMessages = []
+      for (let i = 0; i < toolCallMessages.length; i += 2) {
+        const aiMessage = toolCallMessages[i]
+        const toolMessage = toolCallMessages[i + 1]
+        intermediateStepMessages.push({
+          id: (messagesWithUserReply.length + i / 2).toString(),
+          role: 'system' as const,
+          content: JSON.stringify({
+            action: aiMessage.tool_calls?.[0],
+            observation: toolMessage.content,
+          }),
         })
-        const intermediateStepMessages = []
-        for (let i = 0; i < toolCallMessages.length; i += 2) {
-          const aiMessage = toolCallMessages[i]
-          const toolMessage = toolCallMessages[i + 1]
-          intermediateStepMessages.push({
-            id: (messagesWithUserReply.length + i / 2).toString(),
-            role: 'system' as const,
-            content: JSON.stringify({
-              action: aiMessage.toolInvocations?.[0],
-              observation: toolMessage.content,
-            }),
-          })
-        }
-        const newMessages = messagesWithUserReply
-        for (const message of intermediateStepMessages) {
-          newMessages.push(message)
-          setMessages([...newMessages])
-          await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000))
-        }
-        setMessages([
-          ...newMessages,
-          {
-            id: newMessages.length.toString(),
-            content: responseMessages[responseMessages.length - 1].content,
-            role: 'assistant',
-          },
-        ])
-      } else {
-        if (json.error) {
-          toast({
-            title: 'An error occurred',
-            description: json.error.message,
-          })
-          throw new Error(json.error)
-        }
+      }
+      const newMessages = messagesWithUserReply
+      for (const message of intermediateStepMessages) {
+        newMessages.push(message)
+        setMessages([...newMessages])
+        await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000))
+      }
+      setMessages([
+        ...newMessages,
+        {
+          id: newMessages.length.toString(),
+          content: responseMessages[responseMessages.length - 1].content,
+          role: 'assistant',
+        },
+      ])
+    } else {
+      if (json.error) {
+        toast({
+          title: 'An Error Occurred',
+          description: json.error,
+        })
+        throw new Error(json.error)
       }
     }
   }
@@ -135,8 +143,28 @@ export const Chat = () => {
   }
 
   useEffect(() => {
+    // When messages changes, check the last message appended for the role of 'system'
+    // If it is a system message, check if there is a symbol param in the args
+    const lastMessage = messages[messages.length - 1]
+
+    if (lastMessage?.role === 'system') {
+      const lastMessageContent = JSON.parse(lastMessage.content)
+      const { action } = lastMessageContent
+      console.log('action', action)
+      // Check if observation can be parsed as JSON
+      const { args } = action
+
+      if (args.symbol) {
+        onSymbolChange(args.symbol)
+      }
+    }
+
+    if (lastMessage?.role === 'tool') {
+      console.log('tool message', lastMessage.content)
+    }
+
     scrollToBottom()
-  }, [messages])
+  }, [messages, onSymbolChange])
 
   return (
     <div className="flex flex-col h-full p-4 bg-white rounded-md shadow-md">
@@ -144,9 +172,7 @@ export const Chat = () => {
         {messages.length > 0
           ? [...messages].map((m, i) => {
               const sourceKey = (messages.length - 1 - i).toString()
-              return m.role === 'system' ? (
-                <IntermediateStep key={m.id} message={m}></IntermediateStep>
-              ) : (
+              return m.role === 'system' ? null : (
                 <ChatMessageBubble
                   key={m.id}
                   message={m}
