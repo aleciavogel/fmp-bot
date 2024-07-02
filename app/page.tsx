@@ -26,7 +26,7 @@ const Home = () => {
           <div className="col-span-1">
             {currentSymbol && <DynamicSymbolCard symbol={currentSymbol} />}
           </div>
-          <div className="h-full col-span-3">
+          <div className="h-full col-span-3 overflow-hidden rounded shadow-lg">
             <Chat onSymbolChange={handleNewSymbol} />
           </div>
         </div>

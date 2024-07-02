@@ -130,7 +130,7 @@ export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
   }, [messages, onSymbolChange])
 
   return (
-    <div className="flex flex-col h-full p-4 bg-white rounded-md shadow-md overflow-hidden">
+    <div className="flex flex-col h-full p-4 bg-white rounded-md shadow-md">
       <div className="flex-grow overflow-y-auto space-y-4" ref={messageContainerRef}>
         {messages.length > 0
           ? [...filterOutEvents(messages)].map((m, i) => {
