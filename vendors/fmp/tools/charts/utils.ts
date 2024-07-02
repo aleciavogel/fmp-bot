@@ -1,8 +1,4 @@
-import fmpClient from '@/vendors/fmp/client'
-import { ChartsEndpoints } from '@/vendors/fmp/tools/charts/endpoints'
-import { IntradayData } from '@/vendors/fmp/tools/charts/types'
-
-enum Timeframes {
+export enum Timeframes {
   OneMin = '1min',
   FiveMin = '5min',
   FifteenMin = '15min',
@@ -14,7 +10,7 @@ enum Timeframes {
   OneMonth = '1month',
 }
 
-export const fetchChart = async (symbol: string | null, timeframe = '5min') => {
+export const fetchChart = async (symbol: string | null, timeframe = Timeframes.FiveMin) => {
   if (!symbol) {
     return null
   }

@@ -15,12 +15,16 @@ export async function GET(request: NextRequest) {
   let endpoint = new Date()
   endpoint.setDate(endpoint.getDate() - 1)
 
+  const today = new Date()
+
   try {
     const data = await fmpClient.request(ChartsEndpoints.Intraday, {
       symbol,
       timeframe,
       from: endpoint.toISOString().split('T')[0],
+      to: today.toISOString().split('T')[0],
     })
+
     return NextResponse.json(data)
   } catch (error) {
     if (error instanceof Error) {

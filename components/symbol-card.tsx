@@ -6,13 +6,14 @@ import Chart from 'react-apexcharts'
 import { useQuery } from '@tanstack/react-query'
 
 import { fetchChart } from '@/vendors/fmp/tools/charts/utils'
+import { IntradayData } from '@/vendors/fmp/tools/charts/types'
 
 interface SymbolCardProps {
   symbol: string | null
 }
 
 export const SymbolCard: FC<SymbolCardProps> = ({ symbol }) => {
-  const { data, error, isLoading } = useQuery({
+  const { data, error, isLoading } = useQuery<IntradayData[]>({
     queryKey: ['quotes', symbol],
     queryFn: async () => await fetchChart(symbol),
     enabled: !!symbol,

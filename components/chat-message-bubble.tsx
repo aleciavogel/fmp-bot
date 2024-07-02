@@ -8,7 +8,7 @@ export function ChatMessageBubble(props: { message: Message; aiEmoji?: string; s
 
   return (
     <div
-      className={`${alignmentClassName} ${colorClassName} rounded px-4 py-2 max-w-[80%] mb-8 flex`}
+      className={`${alignmentClassName} ${colorClassName} text-sm md:text-base rounded px-4 py-2 max-w-[80%] mb-8 flex`}
     >
       <div className="mr-2">{prefix}</div>
       <div className="space-y-4">

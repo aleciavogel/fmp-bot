@@ -22,11 +22,11 @@ const Home = () => {
   return (
     <main className="flex justify-center items-center h-screen">
       <div className="flex w-full h-screen">
-        <div className="grid grid-cols-5 w-full h-full gap-6 py-10 px-8 bg-blue-100">
-          <div className="col-span-1">
+        <div className="grid grid-cols-12 w-full h-full gap-6 py-10 px-4 md:px-8 bg-blue-100">
+          <div className="hidden lg:block lg:col-span-4 xl:col-span-3">
             {currentSymbol && <DynamicSymbolCard symbol={currentSymbol} />}
           </div>
-          <div className="h-full col-span-3 overflow-hidden rounded shadow-lg">
+          <div className="h-full col-span-12 lg:col-span-8 xl:col-span-7 overflow-hidden rounded shadow-lg">
             <Chat onSymbolChange={handleNewSymbol} />
           </div>
         </div>
