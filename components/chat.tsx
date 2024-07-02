@@ -105,25 +105,6 @@ export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
       if (event?.symbol) {
         onSymbolChange(event.symbol)
       }
-
-      // let args
-      //
-      // try {
-      //   // Check if input is a JSON string or already an object
-      //   args = typeof input === 'string' ? JSON.parse(input) : input
-      //   args = typeof args.input === 'string' ? JSON.parse(args.input) : args.input
-      //   if (args?.symbol !== undefined) {
-      //     console.log('Symbol:', args?.symbol)
-      //     onSymbolChange(args?.symbol)
-      //   }
-      // } catch (error) {
-      //   console.error('Invalid JSON format:', input)
-      //   args = null
-      // }
-      //
-      // if (args?.symbol) {
-      //   onSymbolChange(args?.symbol)
-      // }
     }
 
     scrollToBottom()

@@ -14,20 +14,14 @@ enum Timeframes {
   OneMonth = '1month',
 }
 
-export const fetchChart = async (
-  symbol: string | null,
-  timeframe: Timeframes = Timeframes.FiveMin,
-): Promise<IntradayData[] | null> => {
+export const fetchChart = async (symbol: string | null, timeframe = '5min') => {
   if (!symbol) {
     return null
   }
 
-  let endpoint = new Date()
-  endpoint.setDate(endpoint.getDate() - 1)
-
-  return await fmpClient.request(ChartsEndpoints.Intraday, {
-    symbol,
-    timeframe,
-    from: endpoint.toISOString().split('T')[0],
-  })
+  const response = await fetch(`/api/charts?symbol=${symbol}&timeframe=${timeframe}`)
+  if (!response.ok) {
+    throw new Error('Network response was not ok')
+  }
+  return response.json()
 }

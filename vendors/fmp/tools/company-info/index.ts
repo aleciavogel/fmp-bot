@@ -18,6 +18,13 @@ const fetchCompanyInfo = new DynamicStructuredTool({
       'executive compensation',
       'analyst estimates',
       'analyst stock recommendations',
+      'recent company news',
+      'insider trades',
+      'ratios',
+      'key executives',
+      'splits history',
+      'stock dividend',
+      'ratings',
     ]),
     year: year.optional().default(new Date().getFullYear()),
   }),
@@ -31,6 +38,14 @@ const fetchCompanyInfo = new DynamicStructuredTool({
         return await fetchAnalystEstimates.func(params)
       case 'analyst stock recommendations':
         return await fetchAnalystStockRecommendations.func(params)
+      case 'recent company news':
+      case 'insider trades':
+      case 'ratios':
+      case 'key executives':
+      case 'splits history':
+      case 'stock dividend':
+      case 'ratings':
+        return await fetchCompanyOutlook.func({ type, ...params })
       default:
         throw new Error(`Invalid type`)
     }
@@ -140,18 +155,45 @@ const fetchCompanyNotes = new DynamicStructuredTool({
 })
 
 // TODO: Too many tokens
-// const fetchCompanyOutlook = new DynamicStructuredTool({
-//   name: 'fetchCompanyOutlook',
-//   description:
-//     'The FMP Company Outlook endpoint provides an overview of a company, including its profile information, most recent insider trading transactions, and financial statements. Investors can use this information to get a comprehensive understanding of a company and to make informed investment decisions.',
-//   schema: z.object({
-//     symbol,
-//   }),
-//   func: async (params) => {
-//     const response = await fmpClient.request(CompanyInfoEndpoints.CompanyOutlook, params)
-//     return JSON.stringify(response)
-//   },
-// })
+const fetchCompanyOutlook = new DynamicStructuredTool({
+  name: 'fetchCompanyOutlook',
+  description:
+    'The FMP Company Outlook endpoint provides an overview of a company, including its profile information, most recent insider trading transactions, and financial statements. Investors can use this information to get a comprehensive understanding of a company and to make informed investment decisions.',
+  schema: z.object({
+    symbol,
+    type: z.enum([
+      'recent company news',
+      'insider trades',
+      'ratios',
+      'key executives',
+      'splits history',
+      'stock dividend',
+      'ratings',
+    ]),
+  }),
+  func: async ({ symbol, type }) => {
+    const response = await fmpClient.request(CompanyInfoEndpoints.CompanyOutlook, { symbol })
+
+    switch (type) {
+      case 'recent company news':
+        return JSON.stringify(response.stockNews)
+      case 'insider trades':
+        return JSON.stringify(response.insideTrades)
+      case 'ratios':
+        return JSON.stringify(response.ratios)
+      case 'key executives':
+        return JSON.stringify(response.keyExecutives)
+      case 'splits history':
+        return JSON.stringify(response.splitsHistory)
+      case 'stock dividend':
+        return JSON.stringify(response.stockDividend)
+      case 'ratings':
+        return JSON.stringify(response.rating)
+      default:
+        throw new Error(`Invalid type`)
+    }
+  },
+})
 
 const companyInfoTools = [
   fetchCompanyInfo,
