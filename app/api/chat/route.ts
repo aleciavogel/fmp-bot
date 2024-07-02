@@ -108,6 +108,19 @@ export async function POST(req: NextRequest) {
       const transformStream = new ReadableStream({
         async start(controller) {
           for await (const { event, data } of eventStream) {
+            if (event === 'on_tool_start') {
+              if (typeof data.input.input === 'string') {
+                const parsed = JSON.parse(data.input.input)
+
+                if (parsed.symbol) {
+                  const toolCallEvent = JSON.stringify({
+                    symbol: JSON.parse(data.input.input).symbol,
+                  })
+                  controller.enqueue(textEncoder.encode(`${toolCallEvent}\n\n`))
+                }
+              }
+            }
+
             if (event === 'on_chat_model_stream') {
               // Intermediate chat model generations will contain tool calls and no content
               if (!!data.chunk.content) {

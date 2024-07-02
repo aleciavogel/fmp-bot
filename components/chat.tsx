@@ -14,6 +14,28 @@ interface ChatProps {
   onSymbolChange: (symbol: string) => void
 }
 
+const embeddedEventRegex = /{"symbol":.*?}\n/
+
+const filterOutEvents = (messages: Message[]) => {
+  return messages.map((m) => {
+    // Use a regular expression to find and remove the tool_call JSON object
+    const cleanedContent = m.content.replace(embeddedEventRegex, '')
+    return { ...m, content: cleanedContent.trim() }
+  })
+}
+
+const getEvent = (message: Message) => {
+  if (!message?.content) {
+    return null
+  }
+
+  const match = message.content.match(embeddedEventRegex)
+  if (match) {
+    return JSON.parse(match[0])
+  }
+  return null
+}
+
 export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
   const messageContainerRef = useRef<HTMLDivElement | null>(null)
   const endpoint = '/api/chat'
@@ -50,12 +72,6 @@ export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
         description: e.message,
       })
     },
-    onFinish: (messages) => {
-      console.log(messages)
-    },
-    onToolCall: (toolCall) => {
-      console.log('Tool call:', toolCall)
-    },
   })
 
   async function sendMessage(e: FormEvent<HTMLFormElement>) {
@@ -70,70 +86,7 @@ export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
       return
     }
 
-    setIntermediateStepsLoading(true)
-    setInput('')
-    const messagesWithUserReply = messages.concat({
-      id: messages.length.toString(),
-      content: input,
-      role: 'user',
-    })
-    setMessages(messagesWithUserReply)
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      body: JSON.stringify({
-        messages: messagesWithUserReply,
-        show_intermediate_steps: true,
-      }),
-    })
-    const json = await response.json()
-    setIntermediateStepsLoading(false)
-    if (response.status === 200) {
-      const responseMessages: Message[] = json.messages
-      // Represent intermediate steps as system messages for display purposes
-      // TODO: Add proper support for tool messages
-      const toolCallMessages = responseMessages.filter((responseMessage: Message) => {
-        return (
-          (responseMessage.role === 'assistant' && !!responseMessage.tool_calls?.length) ||
-          responseMessage.role === 'tool'
-        )
-      })
-
-      const intermediateStepMessages = []
-      for (let i = 0; i < toolCallMessages.length; i += 2) {
-        const aiMessage = toolCallMessages[i]
-        const toolMessage = toolCallMessages[i + 1]
-        intermediateStepMessages.push({
-          id: (messagesWithUserReply.length + i / 2).toString(),
-          role: 'system' as const,
-          content: JSON.stringify({
-            action: aiMessage.tool_calls?.[0],
-            observation: toolMessage.content,
-          }),
-        })
-      }
-      const newMessages = messagesWithUserReply
-      for (const message of intermediateStepMessages) {
-        newMessages.push(message)
-        setMessages([...newMessages])
-        await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000))
-      }
-      setMessages([
-        ...newMessages,
-        {
-          id: newMessages.length.toString(),
-          content: responseMessages[responseMessages.length - 1].content,
-          role: 'assistant',
-        },
-      ])
-    } else {
-      if (json.error) {
-        toast({
-          title: 'An Error Occurred',
-          description: json.error,
-        })
-        throw new Error(json.error)
-      }
-    }
+    handleSubmit(e)
   }
 
   // automatically scroll to bottom of chat
@@ -147,30 +100,40 @@ export const Chat: FC<ChatProps> = ({ onSymbolChange }) => {
     // If it is a system message, check if there is a symbol param in the args
     const lastMessage = messages[messages.length - 1]
 
-    if (lastMessage?.role === 'system') {
-      const lastMessageContent = JSON.parse(lastMessage.content)
-      const { action } = lastMessageContent
-      console.log('action', action)
-      // Check if observation can be parsed as JSON
-      const { args } = action
-
-      if (args.symbol) {
-        onSymbolChange(args.symbol)
+    if (getEvent(lastMessage) !== null) {
+      const event = getEvent(lastMessage)
+      if (event?.symbol) {
+        onSymbolChange(event.symbol)
       }
-    }
 
-    if (lastMessage?.role === 'tool') {
-      console.log('tool message', lastMessage.content)
+      // let args
+      //
+      // try {
+      //   // Check if input is a JSON string or already an object
+      //   args = typeof input === 'string' ? JSON.parse(input) : input
+      //   args = typeof args.input === 'string' ? JSON.parse(args.input) : args.input
+      //   if (args?.symbol !== undefined) {
+      //     console.log('Symbol:', args?.symbol)
+      //     onSymbolChange(args?.symbol)
+      //   }
+      // } catch (error) {
+      //   console.error('Invalid JSON format:', input)
+      //   args = null
+      // }
+      //
+      // if (args?.symbol) {
+      //   onSymbolChange(args?.symbol)
+      // }
     }
 
     scrollToBottom()
   }, [messages, onSymbolChange])
 
   return (
-    <div className="flex flex-col h-full p-4 bg-white rounded-md shadow-md">
+    <div className="flex flex-col h-full p-4 bg-white rounded-md shadow-md overflow-hidden">
       <div className="flex-grow overflow-y-auto space-y-4" ref={messageContainerRef}>
         {messages.length > 0
-          ? [...messages].map((m, i) => {
+          ? [...filterOutEvents(messages)].map((m, i) => {
               const sourceKey = (messages.length - 1 - i).toString()
               return m.role === 'system' ? null : (
                 <ChatMessageBubble
